@@ -1,4 +1,5 @@
-﻿using DataAccess.Repositories;
+﻿using AutoMapper;
+using DataAccess.Repositories;
 using DataAccess.Validators;
 using Domain.Interfaces.Repositories;
 using FluentValidation;
@@ -16,6 +17,7 @@ namespace DataAccess.Configuration
             services.AddScoped<IProductRepository, ProductsRepository>();
             services.AddFluentValidationAutoValidation();
             services.AddValidatorsFromAssemblyContaining<OrderInfoPostValidator>();
+            services.AddAutoMapper(typeof(MapperConfiguration));
         }
     }
 }

@@ -76,25 +76,29 @@ namespace DataAccess.Repositories
         public async Task<PagedList<OrderInfoDTO>> GetAll(RequestParametersDTO parameters)
         {
             var orders = (from order in _context.Orders
-                                join user in _context.Users on order.UserId equals user.Id
-                                select new OrderInfoDTO
-                                {
-                                    Id = order.Id,
-                                    TotalPrice = order.TotalPrice,
-                                    Status = order.Status,
-                                    OrderDate = order.OrderDate,
-                                    Address = order.Address,
-                                    UserId = user.Id,
-                                    FirstName = user.FirstName,
-                                    LastName = user.LastName,
-                                    Phone = user.Phone,
-                                    Products = order.Products.Select(op => op.Product)
-                                             .Select(p => new ProductDTO { Id = p.Id, Name = p.Name, Price = p.Price })
-                                             .ToList(),
-                                })
-                               .GetDataRange(parameters.DataRange)
-                               .Search(parameters.SearchParams)
-                               .GlobalSearch(parameters.GlobalSearchTerm)
+                          join user in _context.Users on order.UserId equals user.Id
+                          select new OrderInfoDTO
+                          {
+                              Id = order.Id,
+                              TotalPrice = order.TotalPrice,
+                              Status = order.Status,
+                              OrderDate = order.OrderDate,
+                              Address = order.Address,
+                              UserId = user.Id,
+                              FirstName = user.FirstName,
+                              LastName = user.LastName,
+                              Phone = user.Phone,
+                              Products = order.Products.Select(op => op.Product)
+                                       .Select(p => new ProductDTO { Id = p.Id, Name = p.Name, Price = p.Price })
+                                       .ToList(),
+                          })
+                               .AsNoTracking()
+                               .DataRange(x => x.TotalPrice > parameters.DataRange.TotalPriceMin 
+                                            && x.TotalPrice < parameters.DataRange.TotalPriceMax
+                                            && x.OrderDate >= parameters.DataRange.DateMin
+                                            && x.OrderDate <= parameters.DataRange.DateMax)
+                               .Filter(parameters.Filter)
+                               .GlobalFilter(parameters.GlobalSearchTerm)
                                .Sort(parameters.OrderBy);
 
             var pagedList = await PagedList<OrderInfoDTO>.ToPagedListAsync(orders, parameters.PageNumber, parameters.PageSize);

@@ -1,6 +1,6 @@
 ﻿namespace Domain.DTOs
 {
-    public class DataRange
+    public class OrderInfoDataRange
     {
         public DateTime DateMin { get; set; } = new DateTime(2000, 1, 1);
         public DateTime DateMax { get; set; } = DateTime.Now;

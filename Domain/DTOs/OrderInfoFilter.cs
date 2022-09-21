@@ -11,6 +11,6 @@ namespace Domain.DTOs
         public OrderStatus? Status { get; set; }
         public string? Address { get; set; }
         public string? Phone { get; set; }
-        public string? Products { get; set; }
+        public ProductFilter? Products { get; set; }
     }
 }
