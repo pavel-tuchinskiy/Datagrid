@@ -35,7 +35,7 @@ namespace DataAccess.Data.Seed
             _orderProductFaker.RuleFor(x => x.Id, s => Guid.NewGuid());
         }
 
-        public async Task Initialize(GridDbContext dbContext)
+        public void Initialize(GridDbContext dbContext)
         {
             dbContext.Database.EnsureCreated();
             Console.WriteLine("Seed data?(y/n): ");
@@ -43,25 +43,32 @@ namespace DataAccess.Data.Seed
 
             if (result == "n") return;
 
-            var products = _productFaker.Generate(1000000);
-            var users = _userFaker.Generate(1000000);
+            Console.WriteLine("Data generation started...");
+
+            var products = _productFaker.Generate(Constants.SEED_DATA_QUANTITY);
+            var users = _userFaker.Generate(Constants.SEED_DATA_QUANTITY);
 
             _orderFaker.RuleFor(x => x.UserId, s => s.PickRandom(users).Id);
 
-            var orders = _orderFaker.Generate(1000000);
+            var orders = _orderFaker.Generate(Constants.SEED_DATA_QUANTITY);
 
             _orderProductFaker.RuleFor(x => x.ProductId, s => s.PickRandom(products).Id);
             _orderProductFaker.RuleFor(x => x.OrderId, s => s.PickRandom(orders).Id);
 
-            var ordersProducts = _orderProductFaker.Generate(1000000);
+            var ordersProducts = _orderProductFaker.Generate(Constants.SEED_DATA_QUANTITY);
+
+            Console.WriteLine("Data generation completed");
+            Console.WriteLine("Insert operation started...");
+
+            dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
 
             Stopwatch stopWatch = new Stopwatch();
             stopWatch.Start();
             
-            await dbContext.BulkInsertAsync(products, options =>
+            dbContext.BulkInsert(products, options =>
             {
                 options.TemporaryTableBatchByTable = 10;
-                options.TemporaryTableInsertBatchSize = 100000;
+                options.TemporaryTableBatchByTable = 100000;
                 options.TemporaryTableUseTableLock = true;
                 options.UseLogDump = false;
                 options.AutoMap = Z.BulkOperations.AutoMapType.ByName;
@@ -70,7 +77,6 @@ namespace DataAccess.Data.Seed
                 options.ValidateAllSourceMapped = false;
                 options.SqlBulkCopyOptions = (int)SqlBulkCopyOptions.TableLock;
                 options.BatchDelayInterval = 0;
-                options.DisableDotCheckForEscapeTableName = false;
                 options.IsCheckConstraintOnInsertDisabled = false;
                 options.DisableDotCheckForEscapeTableName = true;
                 options.DisableTemporaryTableClusteredIndex = true;
@@ -79,13 +85,13 @@ namespace DataAccess.Data.Seed
                 options.DisableValueGenerated = true;
                 options.AutoMapOutputDirection = false;
                 options.InsertKeepIdentity = false;
-                options.BatchSize = 50000;
+                options.BatchSize = 100000;
             });
 
-            await dbContext.BulkInsertAsync(users, options =>
+            dbContext.BulkInsert(users, options =>
             {
                 options.TemporaryTableBatchByTable = 10;
-                options.TemporaryTableInsertBatchSize = 100000;
+                options.TemporaryTableBatchByTable = 100000;
                 options.TemporaryTableUseTableLock = true;
                 options.UseLogDump = false;
                 options.AutoMap = Z.BulkOperations.AutoMapType.ByName;
@@ -94,7 +100,6 @@ namespace DataAccess.Data.Seed
                 options.ValidateAllSourceMapped = false;
                 options.SqlBulkCopyOptions = (int)SqlBulkCopyOptions.TableLock;
                 options.BatchDelayInterval = 0;
-                options.DisableDotCheckForEscapeTableName = false;
                 options.IsCheckConstraintOnInsertDisabled = false;
                 options.DisableDotCheckForEscapeTableName = true;
                 options.DisableTemporaryTableClusteredIndex = true;
@@ -103,13 +108,13 @@ namespace DataAccess.Data.Seed
                 options.DisableValueGenerated = true;
                 options.AutoMapOutputDirection = false;
                 options.InsertKeepIdentity = false;
-                options.BatchSize = 50000;
+                options.BatchSize = 100000;
             });
 
-            await dbContext.BulkInsertAsync(orders, options =>
+            dbContext.BulkInsert(orders, options =>
             {
                 options.TemporaryTableBatchByTable = 10;
-                options.TemporaryTableInsertBatchSize = 100000;
+                options.TemporaryTableBatchByTable = 100000;
                 options.TemporaryTableUseTableLock = true;
                 options.UseLogDump = false;
                 options.AutoMap = Z.BulkOperations.AutoMapType.ByName;
@@ -118,7 +123,6 @@ namespace DataAccess.Data.Seed
                 options.ValidateAllSourceMapped = false;
                 options.SqlBulkCopyOptions = (int)SqlBulkCopyOptions.TableLock;
                 options.BatchDelayInterval = 0;
-                options.DisableDotCheckForEscapeTableName = false;
                 options.DisableDotCheckForEscapeTableName = true;
                 options.IsCheckConstraintOnInsertDisabled = false;
                 options.DisableTemporaryTableClusteredIndex = true;
@@ -127,13 +131,13 @@ namespace DataAccess.Data.Seed
                 options.DisableValueGenerated = true;
                 options.AutoMapOutputDirection = false;
                 options.InsertKeepIdentity = false;
-                options.BatchSize = 50000;
+                options.BatchSize = 100000;
             });
 
-            await dbContext.BulkInsertAsync(ordersProducts, options =>
+            dbContext.BulkInsert(ordersProducts, options =>
             {
                 options.TemporaryTableBatchByTable = 10;
-                options.TemporaryTableInsertBatchSize = 100000;
+                options.TemporaryTableBatchByTable = 100000;
                 options.TemporaryTableUseTableLock = true;
                 options.UseLogDump = false;
                 options.AutoMap = Z.BulkOperations.AutoMapType.ByName;
@@ -142,7 +146,6 @@ namespace DataAccess.Data.Seed
                 options.ValidateAllSourceMapped = false;
                 options.SqlBulkCopyOptions = (int)SqlBulkCopyOptions.TableLock;
                 options.BatchDelayInterval = 0;
-                options.DisableDotCheckForEscapeTableName = false;
                 options.IsCheckConstraintOnInsertDisabled = false;
                 options.DisableDotCheckForEscapeTableName = true;
                 options.DisableTemporaryTableClusteredIndex = true;
@@ -151,13 +154,16 @@ namespace DataAccess.Data.Seed
                 options.DisableValueGenerated = true;
                 options.AutoMapOutputDirection = false;
                 options.InsertKeepIdentity = false;
-                options.BatchSize = 50000;
+                options.BatchSize = 100000;
             });
 
             stopWatch.Stop();
+
+            dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
+
             TimeSpan ts = stopWatch.Elapsed;
             string elapsedTime = String.Format("{0:00}:{1:00}:{2:00}.{3:00}", ts.Hours, ts.Minutes, ts.Seconds, ts.Milliseconds / 10);
-            Console.WriteLine("Seed method exec time: " + elapsedTime);
+            Console.WriteLine("Insert operation completed in " + elapsedTime);
         }
     }
 }

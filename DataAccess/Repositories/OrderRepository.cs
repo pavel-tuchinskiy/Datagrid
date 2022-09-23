@@ -73,7 +73,7 @@ namespace DataAccess.Repositories
                 throw new ResponseException("Something went wrong while saving entity", nameof(Add), ErrorCodes.Err500);
         }
 
-        public async Task<PagedList<OrderInfoDTO>> GetAll(RequestParametersDTO parameters)
+        public async Task<PagedList<OrderInfoDTO>> GetAll(OrderInfoRequestParametersDTO parameters)
         {
             var orders = (from order in _context.Orders
                           join user in _context.Users on order.UserId equals user.Id
@@ -93,7 +93,7 @@ namespace DataAccess.Repositories
                                        .ToList(),
                           })
                                .AsNoTracking()
-                               .DataRange(x => x.TotalPrice > parameters.DataRange.TotalPriceMin 
+                               .DataRange(x => x.TotalPrice > parameters.DataRange.TotalPriceMin
                                             && x.TotalPrice < parameters.DataRange.TotalPriceMax
                                             && x.OrderDate >= parameters.DataRange.DateMin
                                             && x.OrderDate <= parameters.DataRange.DateMax)

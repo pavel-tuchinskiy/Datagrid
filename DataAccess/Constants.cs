@@ -6,5 +6,6 @@
         public const string ORDER_DATE_MIN = "2000/01/01";
         public const int ORDER_TOTALPRICE_MIN = 1;
         public const int ORDER_TOTALPRICE_MAX = 1000000;
+        public const int SEED_DATA_QUANTITY = 1000000;
     }
 }

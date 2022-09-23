@@ -21,7 +21,7 @@ namespace WebApi.Controllers
         [HttpGet]
         public async Task<ReturnHttpResult> Get([FromQuery] OrderRequestParameters orderParams)
         {
-            var parametersDTO = new RequestParametersDTO()
+            var parametersDTO = new OrderInfoRequestParametersDTO()
             {
                 DataRange = orderParams.DataRange,
                 Filter = FilterParser<OrderInfoFilter>.ParseFilter(orderParams.OrderInfoFilter),
