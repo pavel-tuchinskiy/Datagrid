@@ -25,9 +25,6 @@ namespace DataAccess.Data
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(GridDbContext).Assembly);
-
-            var seeder = new Seeder(modelBuilder);
-            seeder.SeedData();
         }
     }
 }
