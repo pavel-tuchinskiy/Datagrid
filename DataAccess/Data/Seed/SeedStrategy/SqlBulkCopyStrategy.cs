@@ -1,6 +1,7 @@
 ﻿
 #define TPL
 using Domain.Entities;
+using Domain.Interfaces.Seeder;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using System.Diagnostics;

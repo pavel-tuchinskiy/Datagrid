@@ -1,6 +1,6 @@
 ﻿using Domain.Entities;
 
-namespace DataAccess.Data.Seed.SeedStrategy
+namespace Domain.Interfaces.Seeder
 {
     public interface ISeedStrategy
     {

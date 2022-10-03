@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Domain.Interfaces.Seeder;
+using Microsoft.Extensions.Configuration;
 
 namespace DataAccess.Data.Seed.SeedStrategy
 {

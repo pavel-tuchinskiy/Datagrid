@@ -1,4 +1,5 @@
 ﻿using Domain.Entities;
+using Domain.Interfaces.Seeder;
 using Microsoft.Data.SqlClient;
 using System.Diagnostics;
 
