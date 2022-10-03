@@ -34,7 +34,7 @@ namespace DataAccess.Repositories
 
         public async Task<PagedList<ProductDTO>> GetProducts(RequestParametersDTO parameters)
         {
-            if (parameters.GlobalSearchTerm != null)
+            if (!string.IsNullOrEmpty(parameters.GlobalSearchTerm))
             {
                 var products = _context.Products.Where(x => x.Name.Contains(parameters.GlobalSearchTerm))
                 .Select(x => new ProductDTO

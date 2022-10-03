@@ -1,7 +1,7 @@
 ﻿using Bogus;
+using DataAccess.Data.Seed.SeedStrategy;
 using Domain.Entities;
-using Microsoft.Data.SqlClient;
-using System.Diagnostics;
+using Microsoft.Extensions.Configuration;
 
 namespace DataAccess.Data.Seed
 {
@@ -11,158 +11,78 @@ namespace DataAccess.Data.Seed
         private readonly Faker<User> _userFaker;
         private readonly Faker<Order> _orderFaker;
         private readonly Faker<OrderProduct> _orderProductFaker;
+
         public DbInitializer()
         {
-            _productFaker = new Faker<Product>();
-            _productFaker.RuleFor(x => x.Id, s => Guid.NewGuid());
-            _productFaker.RuleFor(x => x.Name, s => s.Commerce.ProductName());
-            _productFaker.RuleFor(x => x.Price, s => s.Commerce.Price(100).First());
+            _productFaker = new Faker<Product>()
+                .RuleFor(x => x.Name, s => s.Commerce.ProductName())
+                .RuleFor(x => x.Price, s => s.Commerce.Price(100).First());
 
-            _userFaker = new Faker<User>();
-            _userFaker.RuleFor(x => x.Id, s => Guid.NewGuid());
-            _userFaker.RuleFor(x => x.FirstName, s => s.Name.FirstName());
-            _userFaker.RuleFor(x => x.LastName, s => s.Name.LastName());
-            _userFaker.RuleFor(x => x.Phone, s => s.Phone.PhoneNumber("#######"));
+            _userFaker = new Faker<User>()
+                .RuleFor(x => x.FirstName, s => s.Name.FirstName())
+                .RuleFor(x => x.LastName, s => s.Name.LastName())
+                .RuleFor(x => x.Phone, s => s.Phone.PhoneNumber("#######"));
 
-            _orderFaker = new Faker<Order>();
-            _orderFaker.RuleFor(x => x.Id, s => Guid.NewGuid());
-            _orderFaker.RuleFor(x => x.Address, s => s.Address.FullAddress());
-            _orderFaker.RuleFor(x => x.Status, s => s.PickRandom<OrderStatus>());
-            _orderFaker.RuleFor(x => x.OrderDate, s => s.Date.Past(3));
-            _orderFaker.RuleFor(x => x.TotalPrice, s => s.Commerce.Price(200, 1000).First());
+            _orderFaker = new Faker<Order>()
+                .RuleFor(x => x.Address, s => s.Address.FullAddress())
+                .RuleFor(x => x.Status, s => s.PickRandom<OrderStatus>())
+                .RuleFor(x => x.OrderDate, s => s.Date.Past(3))
+                .RuleFor(x => x.TotalPrice, s => s.Commerce.Price(200, 1000).First());
 
             _orderProductFaker = new Faker<OrderProduct>();
-            _orderProductFaker.RuleFor(x => x.Id, s => Guid.NewGuid());
+            _orderProductFaker.RuleFor(x => x.Id, s => s.Database.Random.Uuid());
         }
 
-        public void Initialize(GridDbContext dbContext)
+        public async Task Initialize(GridDbContext dbContext, IConfiguration configuration)
         {
             dbContext.Database.EnsureCreated();
+            var connection = configuration.GetConnectionString("SqlConnection");
+
             Console.WriteLine("Seed data?(y/n): ");
             var result = Console.ReadLine();
 
-            if (result == "n") return;
+            if (result == "n")
+            {
+                return;
+            }
 
             Console.WriteLine("Data generation started...");
 
-            var products = _productFaker.Generate(Constants.SEED_DATA_QUANTITY);
-            var users = _userFaker.Generate(Constants.SEED_DATA_QUANTITY);
+            var productsIds = SeedHelper.GenerateIds(Constants.SEED_DATA_QUANTITY);
+            var userIds = SeedHelper.GenerateIds(Constants.SEED_DATA_QUANTITY);
+            var orderIds = SeedHelper.GenerateIds(Constants.SEED_DATA_QUANTITY);
 
-            _orderFaker.RuleFor(x => x.UserId, s => s.PickRandom(users).Id);
+            int prodIndex = 0, userIndex = 0, orderIndex = 0;
 
-            var orders = _orderFaker.Generate(Constants.SEED_DATA_QUANTITY);
+            _productFaker.RuleFor(x => x.Id, s => productsIds[prodIndex++]);
+            var products = _productFaker.GenerateLazy(Constants.SEED_DATA_QUANTITY);
 
-            _orderProductFaker.RuleFor(x => x.ProductId, s => s.PickRandom(products).Id);
-            _orderProductFaker.RuleFor(x => x.OrderId, s => s.PickRandom(orders).Id);
+            _userFaker.RuleFor(x => x.Id, s => userIds[userIndex++]);
+            var users = _userFaker.GenerateLazy(Constants.SEED_DATA_QUANTITY);
 
-            var ordersProducts = _orderProductFaker.Generate(Constants.SEED_DATA_QUANTITY);
+            _orderFaker.RuleFor(x => x.UserId, s => s.PickRandom(userIds)).RuleFor(x => x.Id, s => orderIds[orderIndex++]);
+
+            var orders = _orderFaker.GenerateLazy(Constants.SEED_DATA_QUANTITY);
+
+            _orderProductFaker.RuleFor(x => x.ProductId, s => s.PickRandom(productsIds))
+                .RuleFor(x => x.OrderId, s => s.PickRandom(orderIds));
+
+            var orderProducts = _orderProductFaker.GenerateLazy(Constants.SEED_DATA_QUANTITY);
 
             Console.WriteLine("Data generation completed");
+
+            var resolver = new SeedGenerationResolver(dbContext, configuration);
+            var strategy = resolver.GetStategy(SeedStrategies.TVP);
+
+            dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
+
             Console.WriteLine("Insert operation started...");
 
-            dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
+            var seedTime = await strategy.SeedData(users, products, orders, orderProducts);
 
-            Stopwatch stopWatch = new Stopwatch();
-            stopWatch.Start();
-            
-            dbContext.BulkInsert(products, options =>
-            {
-                options.TemporaryTableBatchByTable = 10;
-                options.TemporaryTableBatchByTable = 100000;
-                options.TemporaryTableUseTableLock = true;
-                options.UseLogDump = false;
-                options.AutoMap = Z.BulkOperations.AutoMapType.ByName;
-                options.AutoTruncate = false;
-                options.ValidateAllDestinationMapped = false;
-                options.ValidateAllSourceMapped = false;
-                options.SqlBulkCopyOptions = (int)SqlBulkCopyOptions.TableLock;
-                options.BatchDelayInterval = 0;
-                options.IsCheckConstraintOnInsertDisabled = false;
-                options.DisableDotCheckForEscapeTableName = true;
-                options.DisableTemporaryTableClusteredIndex = true;
-                options.DisableInformationSchemaCache = true;
-                options.DisablePrimaryKeyNullCheck = true;
-                options.DisableValueGenerated = true;
-                options.AutoMapOutputDirection = false;
-                options.InsertKeepIdentity = false;
-                options.BatchSize = 100000;
-            });
+            dbContext.ChangeTracker.AutoDetectChangesEnabled = true;
 
-            dbContext.BulkInsert(users, options =>
-            {
-                options.TemporaryTableBatchByTable = 10;
-                options.TemporaryTableBatchByTable = 100000;
-                options.TemporaryTableUseTableLock = true;
-                options.UseLogDump = false;
-                options.AutoMap = Z.BulkOperations.AutoMapType.ByName;
-                options.AutoTruncate = false;
-                options.ValidateAllDestinationMapped = false;
-                options.ValidateAllSourceMapped = false;
-                options.SqlBulkCopyOptions = (int)SqlBulkCopyOptions.TableLock;
-                options.BatchDelayInterval = 0;
-                options.IsCheckConstraintOnInsertDisabled = false;
-                options.DisableDotCheckForEscapeTableName = true;
-                options.DisableTemporaryTableClusteredIndex = true;
-                options.DisableInformationSchemaCache = true;
-                options.DisablePrimaryKeyNullCheck = true;
-                options.DisableValueGenerated = true;
-                options.AutoMapOutputDirection = false;
-                options.InsertKeepIdentity = false;
-                options.BatchSize = 100000;
-            });
-
-            dbContext.BulkInsert(orders, options =>
-            {
-                options.TemporaryTableBatchByTable = 10;
-                options.TemporaryTableBatchByTable = 100000;
-                options.TemporaryTableUseTableLock = true;
-                options.UseLogDump = false;
-                options.AutoMap = Z.BulkOperations.AutoMapType.ByName;
-                options.AutoTruncate = false;
-                options.ValidateAllDestinationMapped = false;
-                options.ValidateAllSourceMapped = false;
-                options.SqlBulkCopyOptions = (int)SqlBulkCopyOptions.TableLock;
-                options.BatchDelayInterval = 0;
-                options.DisableDotCheckForEscapeTableName = true;
-                options.IsCheckConstraintOnInsertDisabled = false;
-                options.DisableTemporaryTableClusteredIndex = true;
-                options.DisableInformationSchemaCache = true;
-                options.DisablePrimaryKeyNullCheck = true;
-                options.DisableValueGenerated = true;
-                options.AutoMapOutputDirection = false;
-                options.InsertKeepIdentity = false;
-                options.BatchSize = 100000;
-            });
-
-            dbContext.BulkInsert(ordersProducts, options =>
-            {
-                options.TemporaryTableBatchByTable = 10;
-                options.TemporaryTableBatchByTable = 100000;
-                options.TemporaryTableUseTableLock = true;
-                options.UseLogDump = false;
-                options.AutoMap = Z.BulkOperations.AutoMapType.ByName;
-                options.AutoTruncate = false;
-                options.ValidateAllDestinationMapped = false;
-                options.ValidateAllSourceMapped = false;
-                options.SqlBulkCopyOptions = (int)SqlBulkCopyOptions.TableLock;
-                options.BatchDelayInterval = 0;
-                options.IsCheckConstraintOnInsertDisabled = false;
-                options.DisableDotCheckForEscapeTableName = true;
-                options.DisableTemporaryTableClusteredIndex = true;
-                options.DisableInformationSchemaCache = true;
-                options.DisablePrimaryKeyNullCheck = true;
-                options.DisableValueGenerated = true;
-                options.AutoMapOutputDirection = false;
-                options.InsertKeepIdentity = false;
-                options.BatchSize = 100000;
-            });
-
-            stopWatch.Stop();
-
-            dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
-
-            TimeSpan ts = stopWatch.Elapsed;
-            string elapsedTime = String.Format("{0:00}:{1:00}:{2:00}.{3:00}", ts.Hours, ts.Minutes, ts.Seconds, ts.Milliseconds / 10);
+            var elapsedTime = SeedHelper.TimeSpanToFormatedString(seedTime);
             Console.WriteLine("Insert operation completed in " + elapsedTime);
         }
     }

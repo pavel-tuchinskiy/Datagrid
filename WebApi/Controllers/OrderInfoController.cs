@@ -2,7 +2,6 @@
 using Domain.DTOs.OrderInfo;
 using Domain.Interfaces.Repositories;
 using Microsoft.AspNetCore.Mvc;
-using WebApi.Helpers;
 using WebApi.Models;
 
 namespace WebApi.Controllers
@@ -18,13 +17,13 @@ namespace WebApi.Controllers
             _orderRepository = orderRepository;
         }
 
-        [HttpGet]
-        public async Task<ReturnHttpResult> Get([FromQuery] OrderRequestParameters orderParams)
+        [HttpPost("GetAll")]
+        public async Task<ReturnHttpResult> GetAll([FromBody] FilterParameters filterParameters, [FromQuery] RequestParameters orderParams)
         {
-            var parametersDTO = new OrderInfoRequestParametersDTO()
+            var parametersDTO = new OrderInfoRequestParametersDTO
             {
-                DataRange = orderParams.DataRange,
-                Filter = FilterParser<OrderInfoFilter>.ParseFilter(orderParams.OrderInfoFilter),
+                DataRanges = filterParameters.DataRanges,
+                Filters = filterParameters.Filters,
                 GlobalSearchTerm = orderParams.GlobalSearchTerm,
                 OrderBy = orderParams.OrderBy,
                 PageNumber = orderParams.PageNumber,

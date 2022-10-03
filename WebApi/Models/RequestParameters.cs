@@ -18,5 +18,6 @@ namespace WebApi.Models
             }
         }
         public string GlobalSearchTerm { get; set; } = string.Empty;
+        public string OrderBy { get; set; } = string.Empty;
     }
 }

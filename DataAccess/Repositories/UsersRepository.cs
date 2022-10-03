@@ -35,7 +35,7 @@ namespace DataAccess.Repositories
 
         public async Task<PagedList<UserDTO>> GetUsers(RequestParametersDTO parameters)
         {
-            if (parameters.GlobalSearchTerm != null)
+            if (!string.IsNullOrEmpty(parameters.GlobalSearchTerm))
             {
                 var users = _context.Users.Where(x => x.FirstName.Contains(parameters.GlobalSearchTerm) || x.LastName.Contains(parameters.GlobalSearchTerm))
                 .Select(x => new UserDTO

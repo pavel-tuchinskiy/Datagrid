@@ -45,7 +45,7 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    app.SeedDbData();
+    await app.SeedDbData(configuration);
     app.UseSwagger();
     app.UseSwaggerUI();
 }

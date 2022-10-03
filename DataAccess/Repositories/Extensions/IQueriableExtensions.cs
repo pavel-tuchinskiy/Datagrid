@@ -1,32 +1,46 @@
 ﻿using Domain.DTOs;
 using System.Linq.Dynamic.Core;
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 
 namespace DataAccess.Repositories.RepositoryExtensions
 {
-    public static class Extensions
+    public static class IQueriableExtensions
     {
         public static IQueryable<TSource> Filter<TSource>(this IQueryable<TSource> source, List<Filter> filters)
         {
-            if (filters == null)
+            if (filters == null || filters.Count == 0)
                 return source;
 
             foreach(var filter in filters)
             {
+                if (filter.Value == null)
+                    continue;
+
                 if(filter.Operation == FilterOperations.Contains)
                     source = source.Where($"{filter.Property}.Contains(\"{filter.Value}\")");
                 else if(filter.Operation == FilterOperations.DateTimeEquals)
                     source = source.Where($"{filter.Property}.Date == DateTime.Parse(\"{filter.Value}\").Date");
                 else if(filter.Operation == FilterOperations.NestedFilterOperation)
                 {
-                    foreach(var nestedFilter in filter.NestedObjectFilter)
+                    var nestedType = typeof(TSource).GetProperty(filter.Property)?.PropertyType.GetGenericArguments()[0];
+
+                    if (nestedType == null)
+                        continue;
+
+                    var nestedProps = nestedType.GetProperties().Where(x => x.PropertyType != typeof(Guid)).ToList();
+
+                    foreach (var prop in nestedProps)
                     {
-                        if (nestedFilter.Operation == FilterOperations.Contains)
-                            source = source.Where($"{filter.Property}.Any({nestedFilter.Property}.Contains(\"{nestedFilter.Value}\"))");
-                        else if(nestedFilter.Operation == FilterOperations.Equals)
-                            source = source.Where($"{filter.Property}.Any({nestedFilter.Property} == {nestedFilter.Value})");
+                        if(prop.PropertyType == typeof(string))
+                            source = source.Where($"{filter.Property}.Any({prop.Name}.Contains(\"{filter.Value}\"))");
+                        else if(prop.PropertyType == typeof(decimal))
+                        {
+                            var parsedResult = decimal.TryParse(filter.Value.ToString(), out decimal result);
+
+                            if(parsedResult)
+                                source = source.Where($"{filter.Property}.Any({prop.Name} == {result})");
+                        }
                     }
                 }
                 else
@@ -96,12 +110,35 @@ namespace DataAccess.Repositories.RepositoryExtensions
             return source.Where(query);
         }
 
-        public static IQueryable<TSource> DataRange<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
+        public static IQueryable<TSource> DataRange<TSource>(this IQueryable<TSource> source, List<DataRange> dataRanges)
         {
-            if(predicate == null)
+            if(dataRanges == null || dataRanges.Count == 0)
                 return source;
 
-            return source.Where(predicate);
+            var props = typeof(TSource).GetProperties();
+
+            var queryBuilder = new StringBuilder();
+
+            foreach(var dataRange in dataRanges)
+            {
+                if (dataRange.Start == null || dataRange.End == null)
+                    continue;
+
+                if (!props.Any(x => x.Name == dataRange.Property))
+                    continue;
+
+                if(props.FirstOrDefault(x => x.Name == dataRange.Property)?.PropertyType == typeof(DateTime))
+                    queryBuilder.Append($"({dataRange.Property} >= DateTime.Parse(\"{dataRange.Start}\") & {dataRange.Property} <= DateTime.Parse(\"{dataRange.End}\")) & ");
+                else
+                    queryBuilder.Append($"({dataRange.Property} >= {dataRange.Start} & {dataRange.Property} <= {dataRange.End}) & ");
+            }
+
+            var query = queryBuilder.ToString().TrimEnd('&', ' ');
+
+            if(string.IsNullOrEmpty(query))
+                return source;
+
+            return source.Where(query);
         }
 
         public static IQueryable<TSource> Sort<TSource>(this IQueryable<TSource> source, string orderBy)

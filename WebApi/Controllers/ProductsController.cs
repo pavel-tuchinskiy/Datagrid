@@ -2,7 +2,6 @@
 using Domain.DTOs.Product;
 using Domain.Interfaces.Repositories;
 using Microsoft.AspNetCore.Mvc;
-using WebApi.Helpers;
 using WebApi.Models;
 
 namespace WebApi.Controllers
@@ -19,7 +18,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet]
-        public async Task<ReturnHttpResult> Get([FromQuery] ProductRequestParameters parameters)
+        public async Task<ReturnHttpResult> Get([FromQuery] RequestParameters parameters)
         {
             var parmetersParsed = new RequestParametersDTO()
             {

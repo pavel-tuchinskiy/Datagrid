@@ -2,8 +2,8 @@
 {
     public class OrderInfoRequestParametersDTO : RequestParametersDTO
     {
-        public List<Filter> Filter { get; set; }
-        public OrderInfoDataRange DataRange { get; set; }
+        public List<Filter> Filters { get; set; }
+        public List<DataRange> DataRanges { get; set; }
         public string OrderBy { get; set; } = string.Empty;
     }
 }

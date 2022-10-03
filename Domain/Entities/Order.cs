@@ -16,6 +16,6 @@
         public User User { get; set; }
         public string Address { get; set; }
         public decimal TotalPrice { get; set; }
-        public List<OrderProduct> Products { get; set; }
+        public List<OrderProduct> OrderProducts { get; set; }
     }
 }
