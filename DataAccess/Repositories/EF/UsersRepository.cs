@@ -6,7 +6,7 @@ using Domain.Exceptions;
 using Domain.Interfaces.Repositories;
 using Domain.Models;
 
-namespace DataAccess.Repositories
+namespace DataAccess.Repositories.EF
 {
     public class UsersRepository : IUserRepository
     {
@@ -63,8 +63,6 @@ namespace DataAccess.Repositories
                     Id = x.Id,
                     FullName = $"{x.FirstName} {x.LastName}"
                 })
-                  .Skip((parameters.PageNumber - 1) * parameters.PageSize)
-                  .Take(parameters.PageSize)
                   .AsQueryable();
 
                 return await PagedList<UserDTO>.ToPagedListAsync(users, parameters.PageNumber, parameters.PageSize);

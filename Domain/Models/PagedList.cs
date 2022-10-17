@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using MongoDB.Driver;
 
 namespace Domain.Models
 {
@@ -24,6 +25,14 @@ namespace Domain.Models
             var items = await source.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
 
             return new PagedList<T>(items, count, pageNumber, pageSize);
+        }
+
+        public static async Task<PagedList<T>> ToPagedListAsync<TDocument, TProjection>(IFindFluent<TDocument, T> source, int pageNumber, int pageSize)
+        {
+            var count = await source.CountDocumentsAsync();
+            var items = await source.Skip((pageNumber - 1) * pageSize).Limit(pageSize).ToListAsync();
+
+            return new PagedList<T>(items, (int)count, pageNumber, pageSize);
         }
     }
 }

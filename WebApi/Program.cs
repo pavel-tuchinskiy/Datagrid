@@ -4,6 +4,7 @@ using Domain.DTOs;
 using Domain.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Services.Configuration;
 using WebApi.Configuration;
 using WebApi.Middlewares;
 using WebApi.Models;
@@ -13,8 +14,10 @@ var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 
 builder.Services.ConfigureSqlConnection(configuration);
+builder.Services.ConfigureMongoClient(configuration);
 builder.Services.ConfigureCORS();
 builder.Services.ConfigureDAServices();
+builder.Services.SLServicesConfiguration();
 builder.Services.AddControllers()
     .ConfigureApiBehaviorOptions(options =>
     {

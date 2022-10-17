@@ -9,7 +9,7 @@ using Domain.Interfaces.Repositories;
 using Domain.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace DataAccess.Repositories
+namespace DataAccess.Repositories.EF
 {
     public class OrderRepository : IOrderRepository
     {

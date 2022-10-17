@@ -1,6 +1,7 @@
 ﻿using Domain.DTOs;
 using Domain.DTOs.OrderInfo;
 using Domain.Interfaces.Repositories;
+using Domain.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
 using WebApi.Models;
 
@@ -10,11 +11,11 @@ namespace WebApi.Controllers
     [ApiController]
     public class OrderInfoController : ControllerBase
     {
-        private readonly IOrderRepository _orderRepository;
+        private readonly IOrderService _orderService;
 
-        public OrderInfoController(IOrderRepository orderRepository)
+        public OrderInfoController(IOrderService orderService)
         {
-            _orderRepository = orderRepository;
+            _orderService = orderService;
         }
 
         [HttpPost("GetAll")]
@@ -30,7 +31,7 @@ namespace WebApi.Controllers
                 PageSize = orderParams.PageSize
             };
 
-            var orderInfo = await _orderRepository.GetAll(parametersDTO);
+            var orderInfo = await _orderService.GetAll(parametersDTO);
 
             return new ReturnHttpResult(200, orderInfo);
         }
@@ -38,7 +39,7 @@ namespace WebApi.Controllers
         [HttpPost]
         public async Task<ReturnHttpResult> Post(OrderInfoPostDTO orderInfo)
         {
-            await _orderRepository.Add(orderInfo);
+            await _orderService.Add(orderInfo);
 
             return new ReturnHttpResult(201);
         }
@@ -46,14 +47,14 @@ namespace WebApi.Controllers
         [HttpPut("{id}")]
         public async Task<ReturnHttpResult> Put(Guid id, [FromBody]OrderInfoUpdateDTO orderInfo)
         {
-            await _orderRepository.Update(id, orderInfo);
+            await _orderService.Update(id, orderInfo);
             return new ReturnHttpResult(200);
         }
 
         [HttpDelete("{id}")]
         public async Task<ReturnHttpResult> Delete(Guid id)
         {
-            await _orderRepository.Remove(id);
+            await _orderService.Remove(id);
 
             return new ReturnHttpResult(200);
         }

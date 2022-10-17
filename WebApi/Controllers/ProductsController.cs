@@ -1,6 +1,6 @@
 ﻿using Domain.DTOs;
 using Domain.DTOs.Product;
-using Domain.Interfaces.Repositories;
+using Domain.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
 using WebApi.Models;
 
@@ -10,11 +10,11 @@ namespace WebApi.Controllers
     [ApiController]
     public class ProductsController : ControllerBase
     {
-        private readonly IProductRepository _productsRepository;
+        private readonly IProductService _productService;
 
-        public ProductsController(IProductRepository productsRepository)
+        public ProductsController(IProductService productService)
         {
-            _productsRepository = productsRepository;
+            _productService = productService;
         }
 
         [HttpGet]
@@ -27,7 +27,7 @@ namespace WebApi.Controllers
                 PageSize = parameters.PageSize
             };
 
-            var products = await _productsRepository.GetProducts(parmetersParsed);
+            var products = await _productService.GetProducts(parmetersParsed);
 
             return new ReturnHttpResult(200, products);
         }
@@ -35,7 +35,7 @@ namespace WebApi.Controllers
         [HttpPost]
         public async Task<ReturnHttpResult> Post(ProductCreateDTO productCreateDTO)
         {
-            await _productsRepository.CreateProduct(productCreateDTO);
+            await _productService.CreateProduct(productCreateDTO);
 
             return new ReturnHttpResult(201);
         }

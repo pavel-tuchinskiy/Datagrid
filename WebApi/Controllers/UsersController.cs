@@ -1,6 +1,7 @@
 ﻿using Domain.DTOs;
 using Domain.DTOs.User;
 using Domain.Interfaces.Repositories;
+using Domain.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
 using WebApi.Models;
 
@@ -10,11 +11,11 @@ namespace WebApi.Controllers
     [ApiController]
     public class UsersController : ControllerBase
     {
-        private readonly IUserRepository _usersRepository;
+        private readonly IUserService _userService;
 
-        public UsersController(IUserRepository usersRepository)
+        public UsersController(IUserService userService)
         {
-            _usersRepository = usersRepository;
+            _userService = userService;
         }
 
         [HttpGet]
@@ -27,7 +28,7 @@ namespace WebApi.Controllers
                 PageSize = parameters.PageSize
             };
 
-            var users = await _usersRepository.GetUsers(parmetersParsed);
+            var users = await _userService.GetUsers(parmetersParsed);
 
             return new ReturnHttpResult(200, users);
         }
@@ -35,7 +36,7 @@ namespace WebApi.Controllers
         [HttpPost]
         public async Task<ReturnHttpResult> Post(UserCreateDTO userCreateDTO)
         {
-            await _usersRepository.CreateUser(userCreateDTO);
+            await _userService.CreateUser(userCreateDTO);
 
             return new ReturnHttpResult(201);
         }

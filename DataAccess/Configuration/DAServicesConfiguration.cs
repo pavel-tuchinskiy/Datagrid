@@ -1,6 +1,8 @@
 ﻿using AutoMapper;
-using DataAccess.Repositories;
+using DataAccess.Data;
+using DataAccess.Repositories.EF;
 using DataAccess.Validators;
+using Domain.Interfaces.Data;
 using Domain.Interfaces.Repositories;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -17,6 +19,7 @@ namespace DataAccess.Configuration
             services.AddScoped<IProductRepository, ProductsRepository>();
             services.AddFluentValidationAutoValidation();
             services.AddValidatorsFromAssemblyContaining<OrderInfoPostValidator>();
+            services.AddScoped<IGridDbMongoContext, GridDbMongoContext>();
             services.AddAutoMapper(typeof(MapperConfiguration));
         }
     }

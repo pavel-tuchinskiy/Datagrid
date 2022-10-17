@@ -6,7 +6,7 @@ using Domain.Exceptions;
 using Domain.Interfaces.Repositories;
 using Domain.Models;
 
-namespace DataAccess.Repositories
+namespace DataAccess.Repositories.EF
 {
     public class ProductsRepository : IProductRepository
     {
