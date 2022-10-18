@@ -7,27 +7,73 @@ using Domain.Models;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using DataAccess.Repositories.Extensions;
+using Domain.Exceptions;
 
 namespace DataAccess.Repositories.Mongo
 {
     public class OrderRepository : IOrderRepository
     {
         private readonly IGridDbMongoContext _context;
-        private readonly IMongoCollection<Order> _ordersCollection;
+        private readonly IMongoCollection<BsonDocument> _ordersCollection;
         private readonly IMongoCollection<User> _usersCollection;
         private readonly IMongoCollection<Product> _productsCollection;
 
         public OrderRepository(IGridDbMongoContext context)
         {
             _context = context;
-            _ordersCollection = _context.GetCollection<Order>("Orders");
+            _ordersCollection = _context.GetCollection<BsonDocument>("Orders");
             _usersCollection = _context.GetCollection<User>("Users");
             _productsCollection = _context.GetCollection<Product>("Products");
         }
 
-        public Task Add(OrderInfoPostDTO orderInfo)
+        public async Task Add(OrderInfoPostDTO orderInfo)
         {
-            throw new NotImplementedException();
+            var userFilter = Builders<User>.Filter;
+            var user = await _usersCollection.Find(new BsonDocument
+            {
+                { "_id", new BsonDocument{ { "$eq", orderInfo.UserId.ToString() } } }
+            })
+                .FirstOrDefaultAsync();
+
+            if(user == null)
+                throw new ResponseException("Can't find this user", nameof(Add), ErrorCodes.Err404U);
+
+            var prodIds = orderInfo.Products.Select(x => x.ProductId.ToString()).ToList();
+
+            var products = await _productsCollection.Find(new BsonDocument
+            {
+                { "_id", new BsonDocument
+                {
+                    { "$in", new BsonArray().AddRange(prodIds) }
+                } }
+            })
+                .ToListAsync();
+
+            if (products == null)
+                throw new ResponseException("Can't find required products", nameof(Add), ErrorCodes.Err404P);
+
+            var prodArray = new BsonArray();
+
+            foreach (var product in products)
+            {
+                prodArray.Add(new BsonDocument
+                {
+                    { "_id", product.Id.ToString() },
+                    { "name", product.Name },
+                    { "price", product.Price }
+                });
+            }
+
+            await _ordersCollection.InsertOneAsync(new BsonDocument
+            {
+                { "_id", Guid.NewGuid().ToString() },
+                { "order_date", DateTime.UtcNow },
+                { "status", OrderStatus.Awaiting },
+                { "address", orderInfo.Address },
+                { "total_price", (double)products.Sum(x => x.Price) },
+                { "user_id", orderInfo.UserId.ToString() },
+                { "products", prodArray }
+            });
         }
 
         public async Task<PagedList<OrderInfoDTO>> GetAll(OrderInfoRequestParametersDTO parameters)
@@ -47,32 +93,67 @@ namespace DataAccess.Repositories.Mongo
                 .DataRange(parameters.DataRanges)
                 .GlobalFilter(parameters.GlobalSearchTerm)
                 .Filter(parameters.Filters)
-                .Sort<OrderInfoDTO>(parameters.OrderBy)
-                .ToList();
+                .Sort<OrderInfoDTO>(parameters.OrderBy);
 
-            foreach (var order in orders)
-                Console.WriteLine($"{order.Id}, {order.OrderDate}, {order.FirstName}, {order.LastName}, {order.Status}, {order.Products[0].Name}, {order.Products[0].Price}");
-
-            return await PagedList<OrderInfoDTO>.ToPagedListAsync(new List<OrderInfoDTO>().AsQueryable(), 1, 10);
+            return await PagedList<OrderInfoDTO>.ToPagedListAsync(orders, 1, 10);
         }
 
-        private BsonDocument GetFilterCondition<TEntity>(List<Filter> filters)
+        public async Task Remove(Guid orderId)
         {
-            
-            return new BsonDocument { 
-                { "first_name", new BsonDocument { { "$regex", "lcie" }, { "$options", "i" } } },
-                { "address", new BsonDocument { { "$regex", "Elgar Alley" }, { "$options", "i" } } }
-            };
+            var order = await _ordersCollection.FindOneAndDeleteAsync(new BsonDocument
+            {
+                { "_id", new BsonDocument{ { "$eq", orderId.ToString() } } }
+            });
+
+            if(order == null)
+                throw new ResponseException("Can't find this order", nameof(Remove), ErrorCodes.Err404O);
         }
 
-        public Task Remove(Guid orderId)
+        public async Task Update(Guid id, OrderInfoUpdateDTO orderInfo)
         {
-            throw new NotImplementedException();
-        }
+            var prodIds = orderInfo.Products.Select(x => x.ProductId.ToString()).ToList();
 
-        public Task Update(Guid id, OrderInfoUpdateDTO orderInfo)
-        {
-            throw new NotImplementedException();
+            var products = await _productsCollection.Find(new BsonDocument
+            {
+                { "_id", new BsonDocument
+                {
+                    { "$in", new BsonArray().AddRange(prodIds) }
+                } }
+            })
+                .ToListAsync();
+
+            if (products == null)
+                throw new ResponseException("Can't find required products", nameof(Add), ErrorCodes.Err404P);
+
+            var prodArray = new BsonArray();
+
+            foreach (var product in products)
+            {
+                prodArray.Add(new BsonDocument
+                {
+                    { "_id", product.Id.ToString() },
+                    { "name", product.Name },
+                    { "price", product.Price }
+                });
+            }
+
+            var orderBefore = await _ordersCollection.FindOneAndUpdateAsync(new BsonDocument
+            {
+                { "_id", new BsonDocument{ { "$eq", id.ToString() } } }
+            }, new BsonDocument
+            {
+                { "$set", new BsonDocument
+                {
+                    { "order_date", orderInfo.OrderDate },
+                    { "status", orderInfo.Status },
+                    { "address", orderInfo.Address },
+                    { "user_id", orderInfo.UserId.ToString() },
+                    { "products", prodArray }
+                } }
+            }, new FindOneAndUpdateOptions<BsonDocument> { ReturnDocument = ReturnDocument.Before});
+
+            if(orderBefore == null)
+                throw new ResponseException("Order didn't exist and was inserted.", nameof(Remove), ErrorCodes.Err404O);
         }
     }
 }

@@ -34,5 +34,13 @@ namespace Domain.Models
 
             return new PagedList<T>(items, (int)count, pageNumber, pageSize);
         }
+
+        public static async Task<PagedList<T>> ToPagedListAsync<T>(IAggregateFluent<T> source, int pageNumber, int pageSize)
+        {
+            var items = await source.Skip((pageNumber - 1) * pageSize).Limit(pageSize).ToListAsync();
+            var count = items.Count;
+
+            return new PagedList<T>(items, (int)count, pageNumber, pageSize);
+        }
     }
 }
